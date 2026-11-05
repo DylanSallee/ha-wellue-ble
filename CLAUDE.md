@@ -1,10 +1,13 @@
-# Wellue Checkme O2 integration (`wellue_ble`): context for Claude
+# Wellue integration (`wellue_ble`): context for Claude
 
 This is the Home Assistant integration for Wellue Checkme O2 wrist pulse
 oximeters (the Checkme O2 **Max** and **Ultra**). It lives in its own GitHub
 repository, **`ha-wellue-ble`**, laid out for HACS.
 
-- The integration domain is `wellue_ble`.
+- The integration domain is `wellue_ble`. Its display name (`"name"` in
+  `manifest.json` and `hacs.json`) is **"Wellue"**, not "Wellue Checkme O2",
+  leaving room for other Wellue devices. User-facing text about the device
+  itself still says "Wellue Checkme O2".
 - It ships through **HACS** first and aims for HA core later, so follow core
   conventions from the start: config flow, translation keys,
   `has_entity_name`, and a coordinator.
@@ -57,7 +60,7 @@ ha-wellue-ble/
   generates `translations/en.json` from it. Custom integrations don't get that
   script, so write `translations/en.json` directly. The format is the same, so
   moving to core later just means renaming it to `strings.json`.
-- **`hacs.json`:** `{"name": "Wellue Checkme O2", "homeassistant":
+- **`hacs.json`:** `{"name": "Wellue", "homeassistant":
   "2026.10.0"}`. Dylan only wants to support recent HA versions; 2026.10.0 is
   the minimum.
 - **Validation in CI:** `.github/workflows/validate.yml` runs HACS's

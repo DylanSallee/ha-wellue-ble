@@ -4,7 +4,7 @@ Some Home Assistant terms used below:
 
 - **Config entry:** one configured instance of an integration, stored by Home
   Assistant. Each oximeter you add becomes its own config entry. It shows up
-  under Settings > Devices & services > Wellue Checkme O2.
+  under Settings > Devices & services > Wellue.
 
 - **Config flow:** the series of screens ("steps") that creates a config
   entry. Each step is a method named ``async_step_<step id>``. A step either
@@ -122,7 +122,7 @@ class WellueCheckmeO2ConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     # -----------------------------------------------------------------
-    # Way 2: the user clicked "Add integration" and picked Wellue Checkme O2
+    # Way 2: the user clicked "Add integration" and picked Wellue
     # -----------------------------------------------------------------
 
     @override

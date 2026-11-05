@@ -1,6 +1,6 @@
 {
   "domain": "wellue_ble",
-  "name": "Wellue Checkme O2",
+  "name": "Wellue",
   "bluetooth": [
     {
       "connectable": true,

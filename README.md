@@ -1,4 +1,4 @@
-# Wellue Checkme O2 for Home Assistant
+# Wellue for Home Assistant
 
 A Home Assistant integration for **Wellue Checkme O2** wrist pulse oximeters
 (the Checkme O2 Max and Checkme O2 Ultra). It connects over Bluetooth, directly
@@ -50,7 +50,7 @@ connect, and the device's alert and vibration settings as read-only sensors.
 
 1. In HACS, add `https://github.com/DylanSallee/ha-wellue-ble` as a custom
    repository, with the type **Integration**.
-2. Download **Wellue Checkme O2**.
+2. Download **Wellue**.
 3. Restart Home Assistant.
 
 ### By hand
@@ -64,7 +64,7 @@ Turn the oximeter on and close the ViHealth app. Then either:
 
 - wait for Home Assistant to discover it: open **Settings > Devices &
   services** and click **Add** on the discovered "Checkme O2" card; or
-- click **Add integration**, choose **Wellue Checkme O2**, and pick the
+- click **Add integration**, choose **Wellue**, and pick the
   oximeter from the list.
 
 ## Debug logging

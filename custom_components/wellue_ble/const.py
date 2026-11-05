@@ -1,4 +1,4 @@
-"""Constants for the Wellue Checkme O2 integration.
+"""Constants for the Wellue integration.
 
 A "constant" is a value that never changes while Home Assistant runs. Keeping
 them all in this one file means every other file imports the same value, so

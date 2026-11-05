@@ -1,4 +1,4 @@
-"""The Wellue Checkme O2 integration: set up and unload a config entry.
+"""The Wellue integration: set up and unload a config entry.
 
 Home Assistant calls these functions itself:
 
