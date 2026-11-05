@@ -11,8 +11,10 @@
       "local_name": "Band-WU*"
     }
   ],
+  "categories": ["health_wellbeing"],
   "codeowners": ["@DylanSallee"],
   "config_flow": true,
+  "connectivity": ["bluetooth"],
   "dependencies": ["bluetooth_adapters"],
   "documentation": "https://github.com/DylanSallee/ha-wellue-ble",
   "integration_type": "device",

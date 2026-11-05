@@ -39,11 +39,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Checks that the repository meets HACS's requirements: hacs.json,
-      # a README, a license, a description and topics on GitHub, and so on.
+      # a README, a license, a description and topics on GitHub, a brand
+      # icon (custom_components/wellue_ble/brand/icon.png), and so on.
       - name: Run the HACS action
         uses: hacs/action@main
         with:
           category: integration
-          # "brands" checks for a logo. We don't have one yet, so skip that
-          # check for now. Remove this line once the logo is added.
-          ignore: brands

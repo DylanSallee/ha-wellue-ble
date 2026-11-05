@@ -48,7 +48,11 @@ ha-wellue-ble/
   milestone 1 keys below: `"name"`, `"version"` (e.g. `"0.1.0"`; HA refuses to
   load a custom integration without it), `"documentation"` and
   `"issue_tracker"` (GitHub URLs of this repo), and `"codeowners":
-  ["@DylanSallee"]`.
+  ["@DylanSallee"]`. It also has two keys added in HA 2026.11, optional for
+  custom integrations but required in core: `"categories":
+  ["health_wellbeing"]` (where the integration appears when browsing, see
+  <https://contributors.home-assistant.io/core/integrations/categories/>) and
+  `"connectivity": ["bluetooth"]`. Older HA versions ignore them.
 - **Translations:** core integrations write `strings.json` and a build script
   generates `translations/en.json` from it. Custom integrations don't get that
   script, so write `translations/en.json` directly. The format is the same, so
@@ -64,13 +68,15 @@ ha-wellue-ble/
 - **Releases:** HACS installs GitHub Releases. Raise `"version"` in
   `manifest.json`, then publish a release with a matching tag (`v0.1.0`).
   Without any releases, HACS installs the default branch.
-- **Brand icon:** HA shows a placeholder until the integration has a logo.
-  Since HA 2026.3, custom integrations ship their own images in
-  `custom_components/wellue_ble/brand/` (`icon.png`, `logo.png`, plus optional
-  `dark_` and `@2x` variants). The HACS `brands` check accepts that folder.
-  Custom integrations must not use Home Assistant's own branded images. Until
-  there's an icon, `validate.yml` ignores the `brands` check; remove that once
-  the icon is added. This is low priority.
+- **Brand images:** since HA 2026.3, custom integrations ship their own images
+  in `custom_components/wellue_ble/brand/`. This repo has `icon.png`
+  (256×256), `icon@2x.png` (512×512), `logo.png` and `logo@2x.png`, all
+  transparent PNGs. HA only serves those file names plus `dark_` versions, and
+  any missing file falls back to `icon.png`. Guidelines: icon square,
+  256×256 (512×512 for `@2x`); logo's shortest side 128–256 px (256–512 for
+  `@2x`); trimmed, no empty border; never Home Assistant's own branding. The
+  HACS `brands` check looks for `brand/icon.png`. HA only notices a new
+  `brand/` folder after a restart.
 - **Getting into the default HACS store** is a later step. Until then, users
   add the repo in HACS as a *custom repository*.
 
