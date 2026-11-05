@@ -71,8 +71,9 @@ ha-wellue-ble/
   translation mistakes early. The HACS action's `topics` check needs topics set
   on the GitHub repo (Dylan sets those in GitHub's settings).
 - **Releases:** HACS installs GitHub Releases. Raise `"version"` in
-  `manifest.json`, then publish a release with a matching tag. The current
-  version is `1.0.0` (tag `v1.0.0`), the first release, covering milestone 1.
+  `manifest.json`, then publish a release with a matching tag. Releases so
+  far: `v1.0.0` (2026-11-05, milestone 1). `manifest.json` is at `1.0.1`,
+  which adds the Connected binary sensor.
   Without any releases, HACS installs the default branch.
 - **Brand images:** since HA 2026.3, custom integrations ship their own images
   in `custom_components/wellue_ble/brand/`. This repo has `icon.png`
@@ -287,10 +288,16 @@ device is charging, because the firmware falsely reports a finger while docked.
     growing waits (up to 10 minutes), but also retries at once when Bluetooth
     discovery hears the device, because the config flow's
     `_abort_if_unique_id_configured()` reloads entries in "setup retry".
+    This is HA's Bronze-tier quality rule "test-before-setup" (hassfest
+    checks for `async_config_entry_first_refresh` or `ConfigEntryNotReady`),
+    so Dylan chose to keep it. The trade-off he accepted: during "Retrying
+    setup" no entities exist, so even Connected shows Unavailable rather than
+    Disconnected.
 - **Unavailable, never Unknown:**
   - Monitoring switch off, lost connection or failed update: **all** entities
-    are **Unavailable**. With a coordinator, raising `UpdateFailed` does this
-    automatically.
+    are **Unavailable**, except the Monitoring switch and the Connected
+    binary sensor, which are always available. With a coordinator, raising
+    `UpdateFailed` does this automatically.
   - Invalid reading (the library returns `None`; e.g. no finger): the four
     health sensors (SpO2, heart rate, perfusion index, motion) are
     **Unavailable**. Battery, charging, finger present and reading valid stay
@@ -424,16 +431,30 @@ Built in three steps, each tested on Dylan's instance before the next:
    - Finger present: device class `occupancy` (shows Detected/Clear).
    - Charging: device class `battery_charging`.
    - Reading valid.
+   - Connected: device class `connectivity`, diagnostic, always available
+     (see below the list).
 6. **`switch`:** the monitoring switch.
 7. **Diagnostic entities:** the alert switches, thresholds and intensities
    from `DeviceInfo`, shown as read-only sensors. They become editable
    `number`/`select` entities in a later milestone.
 
-**ESPHome entities deliberately left out:** Connected (Unavailable already
-shows it), Signal Strength (the library doesn't provide it, and HA's
-advertisement signal goes stale while connected), Reading Count and Last Seen
-(HA tracks when each entity last updated). The identity values (serial number,
-model, firmware, etc.) go in the device registry, not separate sensors.
+**Connected** binary sensor (added after step C at Dylan's request, for
+dashboards): device class `connectivity`, entity category `diagnostic`, named
+"Connected" via `translation_key` (the device-class default would be
+"Connectivity"). `is_on` is `coordinator.is_connected`. It's **always
+available**, an exception to "Unavailable, never Unknown" like the switch: it
+shows Disconnected when the device can't be reached or monitoring is off.
+Because connecting and disconnecting aren't part of the reading (and
+`always_update=False` skips identical readings), the coordinator calls
+`async_update_listeners()` itself right after connecting and from the
+library's `disconnected_callback`. Otherwise a quick drop-and-reconnect with an
+identical reading would leave Connected stuck on Disconnected.
+
+**ESPHome entities deliberately left out:** Signal Strength (the library
+doesn't provide it, and HA's advertisement signal goes stale while
+connected), Reading Count and Last Seen (HA tracks when each entity last
+updated). The identity values (serial number, model, firmware, etc.) go in the
+device registry, not separate sensors.
 
 ## Open questions and later milestones
 

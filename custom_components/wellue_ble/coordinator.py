@@ -56,7 +56,7 @@ from wellue_ble import (
 from homeassistant.components import bluetooth
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -150,6 +150,10 @@ class WellueCheckmeO2Coordinator(DataUpdateCoordinator[SensorReading | None]):
                     # get_device_info() opens the connection first, since the
                     # library connects automatically before any command.
                     await self._async_refresh_device_info()
+                    # Now connected. Tell the entities straight away, so the
+                    # Connected entity shows it (see _handle_device_disconnected
+                    # for why it needs telling).
+                    self.async_update_listeners()
                 return await self.device.read_sensors()
             except WellueResponseTimeoutError as error:
                 # Connected, but the device didn't answer within 5 seconds.
@@ -193,9 +197,27 @@ class WellueCheckmeO2Coordinator(DataUpdateCoordinator[SensorReading | None]):
             )
 
         if self.device is None:
-            self.device = WellueCheckmeO2(ble_device)
+            self.device = WellueCheckmeO2(
+                ble_device, disconnected_callback=self._handle_device_disconnected
+            )
         else:
             self.device.set_ble_device(ble_device)
+
+    @callback
+    def _handle_device_disconnected(self) -> None:
+        """Called by the library whenever the Bluetooth connection closes.
+
+        The coordinator only tells the entities about changes to the reading
+        (or to whether the last update worked). The connection opening or
+        closing isn't part of the reading, so without this the Connected
+        entity could miss a quick drop-and-reconnect. So tell the entities
+        ourselves: here when the connection closes, and in _async_update_data
+        right after it opens.
+
+        @callback marks a function that runs inside Home Assistant's event
+        loop and doesn't wait for anything, so it's safe to call directly.
+        """
+        self.async_update_listeners()
 
     async def _async_refresh_device_info(self) -> None:
         """Fetch the device's identity and settings, and update its device page.

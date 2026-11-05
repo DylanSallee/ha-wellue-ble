@@ -3,12 +3,15 @@
 A binary sensor is on or off. Its "device class" decides how Home Assistant
 shows those two states, e.g. Detected/Clear or Charging/Not charging.
 
-Two kinds, like sensor.py:
+Three kinds:
 
 - **Readings**, from the latest SensorReading: finger present, charging and
   reading valid.
 - **Settings**, from the device's DeviceInfo: whether the SpO2 alert and the
   heart rate alert are switched on. Diagnostic, and read-only for now.
+- **Connected**: whether Home Assistant's Bluetooth connection to the
+  oximeter is open. Unlike everything else, it never shows Unavailable: it
+  shows Disconnected instead, which is easier to use in dashboards.
 """
 
 from collections.abc import Callable
@@ -111,6 +114,17 @@ SETTING_BINARY_SENSOR_DESCRIPTIONS: tuple[
 )
 
 
+CONNECTED_BINARY_SENSOR_DESCRIPTION = BinarySensorEntityDescription(
+    key="connected",
+    # Named "Connected" in translations/en.json. Without a translation_key,
+    # Home Assistant would name it after its device class: "Connectivity".
+    translation_key="connected",
+    # CONNECTIVITY shows the states as Connected / Disconnected.
+    device_class=BinarySensorDeviceClass.CONNECTIVITY,
+    entity_category=EntityCategory.DIAGNOSTIC,
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: WellueConfigEntry,
@@ -125,6 +139,13 @@ async def async_setup_entry(
     async_add_entities(
         WellueCheckmeO2SettingBinarySensor(coordinator, description)
         for description in SETTING_BINARY_SENSOR_DESCRIPTIONS
+    )
+    async_add_entities(
+        [
+            WellueCheckmeO2ConnectedBinarySensor(
+                coordinator, CONNECTED_BINARY_SENSOR_DESCRIPTION
+            )
+        ]
     )
 
 
@@ -148,6 +169,27 @@ class WellueCheckmeO2ReadingBinarySensor(WellueCheckmeO2Entity, BinarySensorEnti
     def available(self) -> bool:
         """Unavailable when the last update failed, or the value is missing."""
         return super().available and self.is_on is not None
+
+
+class WellueCheckmeO2ConnectedBinarySensor(WellueCheckmeO2Entity, BinarySensorEntity):
+    """Shows whether the Bluetooth connection to the oximeter is open."""
+
+    @property
+    @override
+    def available(self) -> bool:
+        """Always available: show Disconnected rather than Unavailable.
+
+        The other entities go Unavailable when the device can't be reached.
+        This one exists to show exactly that, so it stays available and
+        reports Disconnected instead.
+        """
+        return True
+
+    @property
+    @override
+    def is_on(self) -> bool:
+        """Return True while connected."""
+        return self.coordinator.is_connected
 
 
 class WellueCheckmeO2SettingBinarySensor(WellueCheckmeO2Entity, BinarySensorEntity):

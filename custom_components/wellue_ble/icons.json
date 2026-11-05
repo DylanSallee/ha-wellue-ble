@@ -1,6 +1,12 @@
 {
   "entity": {
     "binary_sensor": {
+      "connected": {
+        "default": "mdi:bluetooth-connect",
+        "state": {
+          "off": "mdi:bluetooth-off"
+        }
+      },
       "finger_present": {
         "default": "mdi:fingerprint"
       },

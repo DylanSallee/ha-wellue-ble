@@ -24,12 +24,14 @@ open, and shows:
 | Finger present | Binary sensor | Detected / Clear |
 | Charging | Binary sensor | On only while charging; off once fully charged |
 | Reading valid | Binary sensor | On when SpO2 and heart rate are real measurements |
+| Connected | Binary sensor | Connected / Disconnected; never Unavailable |
 | Monitoring | Switch | Turn off to free the oximeter for the ViHealth app (see below) |
 
 The four health sensors (SpO2, heart rate, perfusion index and motion) show
 **Unavailable** when there's no valid reading, e.g. with no finger on the
-sensor. Every entity shows Unavailable while Home Assistant can't reach the
-oximeter.
+sensor. Every entity except Connected and Monitoring shows Unavailable while
+Home Assistant can't reach the oximeter; Connected shows **Disconnected**, which
+makes it handy for dashboard conditions.
 
 The device page shows the serial number, model and hardware version, and,
 under **Diagnostic**, the oximeter's own settings (read-only for now): SpO2

@@ -23,6 +23,9 @@
   },
   "entity": {
     "binary_sensor": {
+      "connected": {
+        "name": "Connected"
+      },
       "finger_present": {
         "name": "Finger present"
       },
