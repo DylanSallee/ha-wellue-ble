@@ -1,23 +1,28 @@
-"""Binary sensor entities: finger present, charging and reading valid.
+"""Binary sensor entities.
 
 A binary sensor is on or off. Its "device class" decides how Home Assistant
 shows those two states, e.g. Detected/Clear or Charging/Not charging.
 
-This file works the same way as sensor.py: a list of descriptions, and one
-entity class that uses them.
+Two kinds, like sensor.py:
+
+- **Readings**, from the latest SensorReading: finger present, charging and
+  reading valid.
+- **Settings**, from the device's DeviceInfo: whether the SpO2 alert and the
+  heart rate alert are switched on. Diagnostic, and read-only for now.
 """
 
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import override
 
-from wellue_ble import SensorReading
+from wellue_ble import DeviceInfo as WellueDeviceInfo, SensorReading
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
@@ -29,12 +34,20 @@ PARALLEL_UPDATES = 0
 
 
 @dataclass(frozen=True, kw_only=True)
-class WellueBinarySensorEntityDescription(BinarySensorEntityDescription):
-    """Everything about one binary sensor, plus how to get its value."""
+class WellueReadingBinarySensorEntityDescription(BinarySensorEntityDescription):
+    """A binary sensor whose value comes from the latest SensorReading."""
 
     # Takes a SensorReading and returns True (on), False (off), or None (no
     # value, which makes the binary sensor Unavailable).
     value_fn: Callable[[SensorReading], bool | None]
+
+
+@dataclass(frozen=True, kw_only=True)
+class WellueSettingBinarySensorEntityDescription(BinarySensorEntityDescription):
+    """A binary sensor whose value comes from the device's settings."""
+
+    # Takes a DeviceInfo and returns True (on), False (off), or None.
+    value_fn: Callable[[WellueDeviceInfo], bool | None]
 
 
 def _is_charging(reading: SensorReading) -> bool | None:
@@ -51,8 +64,10 @@ def _is_charging(reading: SensorReading) -> bool | None:
     return reading.is_charging
 
 
-BINARY_SENSOR_DESCRIPTIONS: tuple[WellueBinarySensorEntityDescription, ...] = (
-    WellueBinarySensorEntityDescription(
+READING_BINARY_SENSOR_DESCRIPTIONS: tuple[
+    WellueReadingBinarySensorEntityDescription, ...
+] = (
+    WellueReadingBinarySensorEntityDescription(
         key="finger_present",
         translation_key="finger_present",
         # OCCUPANCY shows the states as Detected / Clear.
@@ -61,19 +76,37 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[WellueBinarySensorEntityDescription, ...] = (
         # firmware falsely reports a finger while docked.
         value_fn=lambda reading: reading.finger_detected,
     ),
-    WellueBinarySensorEntityDescription(
+    WellueReadingBinarySensorEntityDescription(
         key="charging",
         # No translation_key: Home Assistant names it "Charging" from the
         # device class, and shows the states as Charging / Not charging.
         device_class=BinarySensorDeviceClass.BATTERY_CHARGING,
         value_fn=_is_charging,
     ),
-    WellueBinarySensorEntityDescription(
+    WellueReadingBinarySensorEntityDescription(
         key="reading_valid",
         translation_key="reading_valid",
         # True when the health values are real measurements: a finger is
         # present and SpO2 and heart rate are within believable ranges.
         value_fn=lambda reading: reading.reading_is_valid,
+    ),
+)
+
+# No device class, so these show as On / Off.
+SETTING_BINARY_SENSOR_DESCRIPTIONS: tuple[
+    WellueSettingBinarySensorEntityDescription, ...
+] = (
+    WellueSettingBinarySensorEntityDescription(
+        key="oxygen_alert",
+        translation_key="oxygen_alert",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda settings: settings.oxygen_alert_enabled,
+    ),
+    WellueSettingBinarySensorEntityDescription(
+        key="heart_rate_alert",
+        translation_key="heart_rate_alert",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda settings: settings.heart_rate_alert_enabled,
     ),
 )
 
@@ -86,21 +119,51 @@ async def async_setup_entry(
     """Create the binary sensors. Home Assistant calls this during setup."""
     coordinator = entry.runtime_data
     async_add_entities(
-        WellueCheckmeO2BinarySensor(coordinator, description)
-        for description in BINARY_SENSOR_DESCRIPTIONS
+        WellueCheckmeO2ReadingBinarySensor(coordinator, description)
+        for description in READING_BINARY_SENSOR_DESCRIPTIONS
+    )
+    async_add_entities(
+        WellueCheckmeO2SettingBinarySensor(coordinator, description)
+        for description in SETTING_BINARY_SENSOR_DESCRIPTIONS
     )
 
 
-class WellueCheckmeO2BinarySensor(WellueCheckmeO2Entity, BinarySensorEntity):
-    """One binary sensor, configured by its description."""
+class WellueCheckmeO2ReadingBinarySensor(WellueCheckmeO2Entity, BinarySensorEntity):
+    """A binary sensor showing one value from the latest reading."""
 
-    entity_description: WellueBinarySensorEntityDescription
+    entity_description: WellueReadingBinarySensorEntityDescription
 
     @property
     @override
     def is_on(self) -> bool | None:
         """Return True for on, False for off, from the latest reading."""
-        return self.entity_description.value_fn(self.coordinator.data)
+        reading = self.coordinator.data
+        # No reading yet, or monitoring is off.
+        if reading is None:
+            return None
+        return self.entity_description.value_fn(reading)
+
+    @property
+    @override
+    def available(self) -> bool:
+        """Unavailable when the last update failed, or the value is missing."""
+        return super().available and self.is_on is not None
+
+
+class WellueCheckmeO2SettingBinarySensor(WellueCheckmeO2Entity, BinarySensorEntity):
+    """A diagnostic binary sensor showing one of the device's settings."""
+
+    entity_description: WellueSettingBinarySensorEntityDescription
+
+    @property
+    @override
+    def is_on(self) -> bool | None:
+        """Return the setting's value, as last fetched from the device."""
+        settings = self.coordinator.wellue_device_info
+        # Not fetched yet, or monitoring is off.
+        if settings is None:
+            return None
+        return self.entity_description.value_fn(settings)
 
     @property
     @override

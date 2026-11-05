@@ -26,22 +26,48 @@
       "finger_present": {
         "name": "Finger present"
       },
+      "heart_rate_alert": {
+        "name": "Heart rate alert"
+      },
+      "oxygen_alert": {
+        "name": "SpO2 alert"
+      },
       "reading_valid": {
         "name": "Reading valid"
       }
     },
     "sensor": {
+      "buzzer_volume": {
+        "name": "Buzzer volume"
+      },
       "heart_rate": {
         "name": "Heart rate"
       },
+      "heart_rate_alert_high": {
+        "name": "Heart rate alert high"
+      },
+      "heart_rate_alert_low": {
+        "name": "Heart rate alert low"
+      },
       "motion": {
         "name": "Motion"
+      },
+      "oxygen_alert_threshold": {
+        "name": "SpO2 alert threshold"
       },
       "oxygen_saturation": {
         "name": "SpO2"
       },
       "perfusion_index": {
         "name": "Perfusion index"
+      },
+      "vibration_intensity": {
+        "name": "Vibration intensity"
+      }
+    },
+    "switch": {
+      "monitoring": {
+        "name": "Monitoring"
       }
     }
   },

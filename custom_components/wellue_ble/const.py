@@ -22,6 +22,14 @@ MANUFACTURER: Final = "Wellue"
 # the ESPHome setup, where this rate was tested for battery impact.
 UPDATE_INTERVAL: Final = timedelta(seconds=1)
 
+# The key under which the Monitoring switch's on/off state is saved in the
+# config entry's data, so it's remembered across Home Assistant restarts.
+CONF_MONITORING_ENABLED: Final = "monitoring_enabled"
+
+# Unit for heart rates. Home Assistant has no constant for beats per minute;
+# core integrations use the plain text "bpm".
+UNIT_BEATS_PER_MINUTE: Final = "bpm"
+
 # The models we recognize, keyed by the start of the name each one advertises
 # over Bluetooth. For example, a Checkme O2 Max advertises "O2M 2693", where
 # 2693 is the last four digits of its serial number.

@@ -24,16 +24,31 @@ open, and shows:
 | Finger present | Binary sensor | Detected / Clear |
 | Charging | Binary sensor | On only while charging; off once fully charged |
 | Reading valid | Binary sensor | On when SpO2 and heart rate are real measurements |
+| Monitoring | Switch | Turn off to free the oximeter for the ViHealth app (see below) |
 
 The four health sensors (SpO2, heart rate, perfusion index and motion) show
 **Unavailable** when there's no valid reading, e.g. with no finger on the
 sensor. Every entity shows Unavailable while Home Assistant can't reach the
 oximeter.
 
-The device page shows the serial number, model and hardware version.
+The device page shows the serial number, model and hardware version, and,
+under **Diagnostic**, the oximeter's own settings (read-only for now): SpO2
+alert and its threshold, heart rate alert and its high and low limits, buzzer
+volume and vibration intensity. They're re-read each time Home Assistant
+reconnects.
 
-Still to come: a switch to pause monitoring so the official ViHealth app can
-connect, and the device's alert and vibration settings as read-only sensors.
+## Using the ViHealth app
+
+The oximeter accepts only one connection at a time. To use the official
+ViHealth app (for example, to change a setting or download a recording):
+
+1. Turn the oximeter's **Monitoring** switch off. Home Assistant disconnects,
+   and its entities show Unavailable.
+2. Use the app, then close it, or turn off your phone's Bluetooth.
+3. Turn **Monitoring** back on. Home Assistant reconnects within a few seconds.
+
+The switch remembers its state across Home Assistant restarts, so a restart
+won't take the oximeter back while you're using the app.
 
 ## Requirements
 

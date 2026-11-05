@@ -4,22 +4,51 @@
       "finger_present": {
         "default": "mdi:fingerprint"
       },
+      "heart_rate_alert": {
+        "default": "mdi:alarm-light"
+      },
+      "oxygen_alert": {
+        "default": "mdi:alarm-light"
+      },
       "reading_valid": {
         "default": "mdi:check-circle"
       }
     },
     "sensor": {
+      "buzzer_volume": {
+        "default": "mdi:volume-high"
+      },
       "heart_rate": {
         "default": "mdi:heart-pulse"
       },
+      "heart_rate_alert_high": {
+        "default": "mdi:heart-plus"
+      },
+      "heart_rate_alert_low": {
+        "default": "mdi:heart-minus"
+      },
       "motion": {
         "default": "mdi:motion"
+      },
+      "oxygen_alert_threshold": {
+        "default": "mdi:bell-cog"
       },
       "oxygen_saturation": {
         "default": "mdi:lungs"
       },
       "perfusion_index": {
         "default": "mdi:signal"
+      },
+      "vibration_intensity": {
+        "default": "mdi:watch-vibrate"
+      }
+    },
+    "switch": {
+      "monitoring": {
+        "default": "mdi:power",
+        "state": {
+          "off": "mdi:power-off"
+        }
       }
     }
   }

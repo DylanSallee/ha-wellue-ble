@@ -39,6 +39,8 @@ ha-wellue-ble/
 │       ├── sensor.py
 │       ├── binary_sensor.py
 │       ├── switch.py
+│       ├── icons.json           # entity icons, keyed by translation_key
+│       ├── brand/               # icon.png, logo.png, ... (see below)
 │       └── translations/
 │           └── en.json          # user-facing text (see below)
 ├── .github/workflows/validate.yml
@@ -69,7 +71,8 @@ ha-wellue-ble/
   translation mistakes early. The HACS action's `topics` check needs topics set
   on the GitHub repo (Dylan sets those in GitHub's settings).
 - **Releases:** HACS installs GitHub Releases. Raise `"version"` in
-  `manifest.json`, then publish a release with a matching tag (`v0.1.0`).
+  `manifest.json`, then publish a release with a matching tag. The current
+  version is `1.0.0` (tag `v1.0.0`), the first release, covering milestone 1.
   Without any releases, HACS installs the default branch.
 - **Brand images:** since HA 2026.3, custom integrations ship their own images
   in `custom_components/wellue_ble/brand/`. This repo has `icon.png`
@@ -264,17 +267,25 @@ device is charging, because the firmware falsely reports a finger while docked.
     reconnects within a second of HA hearing the device again. A "refresh when
     it advertises" trigger was considered and left out: it would save under a
     second.
-  - The `bluetooth.async_register_callback` callback passes each new
-    `BLEDevice` to `device.set_ble_device()`, so reconnects use the best
-    adapter or proxy.
+  - Before every (re)connect, the coordinator asks
+    `async_ble_device_from_address` for the best adapter or proxy and passes
+    it to `device.set_ble_device()`. So there's **no**
+    `bluetooth.async_register_callback`: it was in step B but only duplicated
+    this, and was removed in step C.
+  - The library object (`WellueCheckmeO2`) is created by the coordinator on
+    its first connect, not during setup, because it needs a `BLEDevice`,
+    which only exists while HA can hear the device. Setup therefore doesn't
+    need the device in range, which matters when monitoring is off and the
+    ViHealth app holds the connection.
   - A `WellueResponseTimeoutError` (connected, but no answer in 5 s) drops
     the connection, so the next poll reconnects fresh instead of reusing a
     stuck one. Other errors leave the connection alone.
   - Disconnect on unload and on `EVENT_HOMEASSISTANT_STOP` (HA doesn't unload
     entries on shutdown), so the ViHealth app can connect straight away.
-  - If HA starts while the device is away, setup raises `ConfigEntryNotReady`.
-    HA retries with growing waits (up to 10 minutes), but also retries at once
-    when Bluetooth discovery hears the device, because the config flow's
+  - If HA starts while the device is away (and monitoring is on), the first
+    refresh fails and setup raises `ConfigEntryNotReady`. HA retries with
+    growing waits (up to 10 minutes), but also retries at once when Bluetooth
+    discovery hears the device, because the config flow's
     `_abort_if_unique_id_configured()` reloads entries in "setup retry".
 - **Unavailable, never Unknown:**
   - Monitoring switch off, lost connection or failed update: **all** entities
@@ -293,14 +304,28 @@ device is charging, because the firmware falsely reports a finger while docked.
   days by default (`recorder: purge_keep_days`). Long-term statistics
   (5-minute and hourly mean/min/max) are kept forever.
 - **Unit conversion** happens in the library, not the integration.
-- **Monitoring switch:** add a `switch` entity (entity category `config`).
-  - **Off:** stop polling and call `device.disconnect()`, so Dylan can use the
-    official ViHealth app.
-  - **On:** resume polling.
-  - **Remembers its state across HA restarts.** This differs from ESPHome's
+- **Monitoring switch** (`switch.py`, named "Monitoring"; Dylan considered
+  "Monitoring enabled" and chose the shorter name; key and
+  `translation_key` are `monitoring`; entity category
+  `config`, always available). Mirrors ESPHome's "Monitoring Enabled".
+  - **Off** (`coordinator.async_stop_monitoring`): set
+    `update_interval = None` (stops polling), wait for any reading in
+    progress, `device.disconnect()`, then clear the reading and DeviceInfo
+    (`async_set_updated_data(None)`), so every other entity is Unavailable
+    and nothing stale shows when monitoring resumes.
+  - **On** (`async_start_monitoring`): restore the interval and
+    `async_refresh()` at once.
+  - A coordinator `asyncio.Lock` makes readings and "off" take turns.
+    Without it, switching off mid-reading could disconnect and the reading's
+    next command would silently reconnect.
+  - **Remembers its state across HA restarts.** Stored as
+    `CONF_MONITORING_ENABLED` in the config entry's `data` with
+    `async_update_entry` (same approach as core's `flux_led` switch), because
+    setup must know it **before** connecting; a `RestoreEntity` only
+    restores after the entities exist. With monitoring off, setup skips the
+    first refresh and doesn't touch the device. This differs from ESPHome's
     `ALWAYS_ON`: a restart shouldn't take the device back while Dylan is
     using the app.
-  - This mirrors the "Monitoring Enabled" switch in the ESPHome setup.
 - **Naming:** the config entry title and device name are a friendly name built
   from the advertised name: `O2M 2693` → `Checkme O2 Max 2693`, `Band-WU 1234`
   → `Checkme O2 Ultra 1234`. An unrecognized prefix keeps the advertised name
@@ -322,6 +347,14 @@ device is charging, because the firmware falsely reports a finger while docked.
   `translation_key`; HA names them from their device class.
 - **Charging:** one binary sensor, on only while actively charging, off once
   fully charged (same as ESPHome). No separate 3-state sensor.
+- **Diagnostic entities** (entity category `diagnostic`, from `DeviceInfo`,
+  read-only): SpO2 alert, Heart rate alert (binary sensors, On/Off); SpO2
+  alert threshold (%), Heart rate alert high, Heart rate alert low (bpm),
+  Buzzer volume, Vibration intensity (unitless sensors, no state class).
+  `screen_mode` is left out until its values are understood. Each platform
+  has two entity classes: "reading" ones (from `coordinator.data`) and
+  "setting" ones (from `coordinator.wellue_device_info`); both are
+  Unavailable when their source is `None`.
 
 ## Device facts from real hardware
 
@@ -354,9 +387,10 @@ Built in three steps, each tested on Dylan's instance before the next:
 - **Step A** (done; tested on Dylan's instance 2026-11-05): repo skeleton,
   `manifest.json`, `hacs.json`, CI, the config flow, and a setup that only
   checks HA can hear the device. Items 1–2 below.
-- **Step B** (written 2026-11-05; not yet tested on hardware): coordinator,
+- **Step B** (done; tested on Dylan's instance 2026-11-05): coordinator,
   sensors and binary sensors. Items 3–5.
-- **Step C:** monitoring switch and diagnostic sensors. Items 6–7.
+- **Step C** (written 2026-11-05; not yet tested on hardware): monitoring
+  switch and diagnostic sensors. Items 6–7.
 
 1. **`manifest.json`:**
    - `"domain": "wellue_ble"`
@@ -375,8 +409,8 @@ Built in three steps, each tested on Dylan's instance before the next:
    - Call `device.read_sensors()` on each update. Turn any `WellueError` into
      `UpdateFailed`.
    - Fetch `get_device_info()` after every (re)connect.
-   - Register a `bluetooth.async_register_callback` that calls
-     `device.set_ble_device()` (see "Connection" above).
+   - Pass the freshest `BLEDevice` to the library before each reconnect (see
+     "Connection" above).
    - Disconnect on unload.
    - The 1 second interval may draw pushback in a core review. Decide then.
      Keep it simple for now.
