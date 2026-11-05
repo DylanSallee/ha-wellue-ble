@@ -1,0 +1,49 @@
+# Runs Home Assistant's and HACS's checks on the integration. They catch
+# mistakes in manifest.json, translations/en.json and hacs.json early, before
+# anyone installs a broken version.
+#
+# Results show up on GitHub under the "Actions" tab, and as a check mark or a
+# red cross next to each commit.
+
+name: Validate
+
+on:
+  # Every push to any branch, and every pull request.
+  push:
+  pull_request:
+  # Once a day at midnight UTC, so a new Home Assistant or HACS rule that the
+  # integration breaks shows up even when nothing was pushed.
+  schedule:
+    - cron: "0 0 * * *"
+  # Adds a "Run workflow" button on the Actions tab to run it by hand.
+  workflow_dispatch:
+
+# The jobs only need to read the repository.
+permissions:
+  contents: read
+
+jobs:
+  hassfest:
+    name: Home Assistant validation (hassfest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+      # hassfest is Home Assistant's own checker for integrations, the same
+      # one core integrations must pass.
+      - name: Run hassfest
+        uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    name: HACS validation
+    runs-on: ubuntu-latest
+    steps:
+      # Checks that the repository meets HACS's requirements: hacs.json,
+      # a README, a license, a description and topics on GitHub, and so on.
+      - name: Run the HACS action
+        uses: hacs/action@main
+        with:
+          category: integration
+          # "brands" checks for a logo. We don't have one yet, so skip that
+          # check for now. Remove this line once the logo is added.
+          ignore: brands

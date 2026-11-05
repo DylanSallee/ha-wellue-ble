@@ -1,0 +1,29 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "This device is already configured.",
+      "already_in_progress": "This device is already being set up. Finish that setup first.",
+      "no_devices_found": "No Wellue Checkme O2 found nearby. Make sure it's turned on, in range of a Bluetooth adapter or proxy, and not connected to another app or device."
+    },
+    "flow_title": "{name}",
+    "step": {
+      "bluetooth_confirm": {
+        "description": "Do you want to set up {name}?"
+      },
+      "user": {
+        "data": {
+          "address": "Device"
+        },
+        "data_description": {
+          "address": "The oximeter to set up, shown with its Bluetooth address."
+        },
+        "description": "Choose a device to set up."
+      }
+    }
+  },
+  "exceptions": {
+    "device_not_found": {
+      "message": "Could not find the Wellue Checkme O2 with address {address}: {reason}"
+    }
+  }
+}
