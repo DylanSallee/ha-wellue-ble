@@ -21,7 +21,34 @@
       }
     }
   },
+  "entity": {
+    "binary_sensor": {
+      "finger_present": {
+        "name": "Finger present"
+      },
+      "reading_valid": {
+        "name": "Reading valid"
+      }
+    },
+    "sensor": {
+      "heart_rate": {
+        "name": "Heart rate"
+      },
+      "motion": {
+        "name": "Motion"
+      },
+      "oxygen_saturation": {
+        "name": "SpO2"
+      },
+      "perfusion_index": {
+        "name": "Perfusion index"
+      }
+    }
+  },
   "exceptions": {
+    "communication_error": {
+      "message": "Error communicating with {name}: {error}"
+    },
     "device_not_found": {
       "message": "Could not find the Wellue Checkme O2 with address {address}: {reason}"
     }

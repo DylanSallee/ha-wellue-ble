@@ -1,0 +1,26 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "finger_present": {
+        "default": "mdi:fingerprint"
+      },
+      "reading_valid": {
+        "default": "mdi:check-circle"
+      }
+    },
+    "sensor": {
+      "heart_rate": {
+        "default": "mdi:heart-pulse"
+      },
+      "motion": {
+        "default": "mdi:motion"
+      },
+      "oxygen_saturation": {
+        "default": "mdi:lungs"
+      },
+      "perfusion_index": {
+        "default": "mdi:signal"
+      }
+    }
+  }
+}

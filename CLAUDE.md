@@ -100,7 +100,14 @@ then install `homeassistant==2026.10.0` and `wellue-ble` into it. Importing
 
 - import the integration's modules against that HA;
 - run `ruff check` and `ruff format` with HA core's `pyproject.toml` as the
-  config (`--config path/to/core/pyproject.toml`), to match core's style.
+  config (`--config path/to/core/pyproject.toml`), to match core's style. Add
+  `--config "lint.isort.known-third-party = ['wellue_ble']"` to `ruff check`:
+  outside a core checkout, ruff otherwise mistakes the library for this
+  package (same name) and wants the wrong import order. Imports go standard
+  library, then the `wellue_ble` library, then `homeassistant`, then local.
+- In 2026.10, look up devices with `async_get_device_by_identifier` (or
+  `..._by_connection`); `async_get_device` is deprecated because identifiers
+  are no longer unique across config entries.
 
 `hassfest` itself runs in CI on every push.
 
@@ -245,15 +252,27 @@ device is charging, because the firmware falsely reports a finger while docked.
 - **Connection:** keep a persistent connection and poll every **1 second**.
   Dylan tested this rate thoroughly with ESPHome, and the battery impact is
   acceptable. Dylan's priorities: connection stability, and reconnecting as
-  soon as possible. The plan for step B:
+  soon as possible. How `coordinator.py` does it:
   - If not connected and HA can't currently hear the device
     (`async_ble_device_from_address` returns `None`), fail the update right
     away (`UpdateFailed`) instead of trying to connect. That way an absent
     device doesn't keep a proxy connection slot busy.
-  - When the `bluetooth.async_register_callback` callback sees the device
-    advertise, pass the new `BLEDevice` to `device.set_ble_device()`. If the
-    last update failed, request a refresh at once, so it reconnects right away
-    instead of waiting for the next poll.
+  - The coordinator keeps polling every second after failures, so it
+    reconnects within a second of HA hearing the device again. A "refresh when
+    it advertises" trigger was considered and left out: it would save under a
+    second.
+  - The `bluetooth.async_register_callback` callback passes each new
+    `BLEDevice` to `device.set_ble_device()`, so reconnects use the best
+    adapter or proxy.
+  - A `WellueResponseTimeoutError` (connected, but no answer in 5 s) drops
+    the connection, so the next poll reconnects fresh instead of reusing a
+    stuck one. Other errors leave the connection alone.
+  - Disconnect on unload and on `EVENT_HOMEASSISTANT_STOP` (HA doesn't unload
+    entries on shutdown), so the ViHealth app can connect straight away.
+  - If HA starts while the device is away, setup raises `ConfigEntryNotReady`.
+    HA retries with growing waits (up to 10 minutes), but also retries at once
+    when Bluetooth discovery hears the device, because the config flow's
+    `_abort_if_unique_id_configured()` reloads entries in "setup retry".
 - **Unavailable, never Unknown:**
   - Monitoring switch off, lost connection or failed update: **all** entities
     are **Unavailable**. With a coordinator, raising `UpdateFailed` does this
@@ -286,10 +305,20 @@ device is charging, because the firmware falsely reports a finger while docked.
   table is `MODEL_NAME_BY_ADVERTISED_NAME_PREFIX` in `const.py`. Keep it in
   sync with the `bluetooth` matchers in `manifest.json`.
 - **Device info** fills HA's device registry: `serial_number`, `model`
-  (friendly model name from the prefix when recognized), `sw_version`,
-  `hw_version`, manufacturer "Wellue". Fetch it again after **every**
-  (re)connect, so settings changed in the ViHealth app show up when
-  monitoring resumes.
+  (friendly model name from the prefix when recognized), `model_id` (the
+  device's code, `1642`), `hw_version`, manufacturer "Wellue". **No
+  `sw_version`**: the device reports firmware `0.0.0` but the app shows
+  `1.0.0.0`, so leave it blank until the real source is found. The coordinator
+  fetches it again after **every** (re)connect and calls
+  `async_get_or_create` (creates the device page, then updates it), so
+  settings changed in the ViHealth app show up when monitoring resumes.
+  Entities attach to the page with just `identifiers`.
+- **Entity names:** sentence case, like HA core ("Heart rate", not "Heart
+  Rate"). Names: SpO2, Heart rate, Perfusion index, Motion, Battery, Finger
+  present, Charging, Reading valid. Battery and Charging have no
+  `translation_key`; HA names them from their device class.
+- **Charging:** one binary sensor, on only while actively charging, off once
+  fully charged (same as ESPHome). No separate 3-state sensor.
 
 ## Device facts from real hardware
 
@@ -319,10 +348,11 @@ device is charging, because the firmware falsely reports a finger while docked.
 
 Built in three steps, each tested on Dylan's instance before the next:
 
-- **Step A** (written 2026-11-05; not yet tested on hardware): repo skeleton,
+- **Step A** (done; tested on Dylan's instance 2026-11-05): repo skeleton,
   `manifest.json`, `hacs.json`, CI, the config flow, and a setup that only
   checks HA can hear the device. Items 1–2 below.
-- **Step B:** coordinator, sensors and binary sensors. Items 3–5.
+- **Step B** (written 2026-11-05; not yet tested on hardware): coordinator,
+  sensors and binary sensors. Items 3–5.
 - **Step C:** monitoring switch and diagnostic sensors. Items 6–7.
 
 1. **`manifest.json`:**
@@ -343,8 +373,7 @@ Built in three steps, each tested on Dylan's instance before the next:
      `UpdateFailed`.
    - Fetch `get_device_info()` after every (re)connect.
    - Register a `bluetooth.async_register_callback` that calls
-     `device.set_ble_device()` (and refreshes at once after a failure; see
-     "Connection" above).
+     `device.set_ble_device()` (see "Connection" above).
    - Disconnect on unload.
    - The 1 second interval may draw pushback in a core review. Decide then.
      Keep it simple for now.

@@ -9,14 +9,31 @@ or through an ESPHome Bluetooth proxy, using the
 > affiliated with Wellue or Viatom. Don't rely on it for medical decisions or
 > alarms.
 
-## Status
+## What it provides
 
-Early development. Version 0.1.0 can discover the oximeter and add it to Home
-Assistant, but doesn't show any readings yet.
+Home Assistant reads the oximeter once a second over a connection it keeps
+open, and shows:
 
-Planned for the first full release: blood oxygen (SpO2), heart rate, perfusion
-index, motion, battery level, charging and finger detection, plus a switch to
-pause monitoring so the official ViHealth app can connect.
+| Entity | Type | Notes |
+| --- | --- | --- |
+| SpO2 | Sensor, % | Blood oxygen saturation |
+| Heart rate | Sensor, bpm | |
+| Perfusion index | Sensor, % | Signal strength at the sensor, e.g. 2.3 % |
+| Motion | Sensor | Unitless; a higher number means more movement |
+| Battery | Sensor, % | |
+| Finger present | Binary sensor | Detected / Clear |
+| Charging | Binary sensor | On only while charging; off once fully charged |
+| Reading valid | Binary sensor | On when SpO2 and heart rate are real measurements |
+
+The four health sensors (SpO2, heart rate, perfusion index and motion) show
+**Unavailable** when there's no valid reading, e.g. with no finger on the
+sensor. Every entity shows Unavailable while Home Assistant can't reach the
+oximeter.
+
+The device page shows the serial number, model and hardware version.
+
+Still to come: a switch to pause monitoring so the official ViHealth app can
+connect, and the device's alert and vibration settings as read-only sensors.
 
 ## Requirements
 

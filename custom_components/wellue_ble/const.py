@@ -5,6 +5,7 @@ them all in this one file means every other file imports the same value, so
 something like the integration's domain is only ever typed out in one place.
 """
 
+from datetime import timedelta
 from typing import Final
 
 # The integration's "domain": its unique ID inside Home Assistant. It must
@@ -12,6 +13,14 @@ from typing import Final
 # key in manifest.json. Home Assistant uses it to find the integration, to
 # group its config entries, and as a prefix in log messages and services.
 DOMAIN: Final = "wellue_ble"
+
+# Shown as the manufacturer on the device's page in Home Assistant.
+MANUFACTURER: Final = "Wellue"
+
+# How often to ask the oximeter for a new reading. The device never sends
+# readings by itself, so every value has to be asked for. One second matches
+# the ESPHome setup, where this rate was tested for battery impact.
+UPDATE_INTERVAL: Final = timedelta(seconds=1)
 
 # The models we recognize, keyed by the start of the name each one advertises
 # over Bluetooth. For example, a Checkme O2 Max advertises "O2M 2693", where
